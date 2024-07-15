@@ -1,6 +1,5 @@
 Name: oauth2
-Param: gatewayHost: Acorn Gateway host (i.e. http://localhost:8080)
-Param: appId: ID of the OAuth app in Acorn Gateway
+Param: integration: Name of the integration to use
 Param: env: Name of the environment variable to set with the token
 Param: scope: Space-separated list of scopes to request
 

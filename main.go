@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/adrg/xdg"
 	"github.com/gptscript-ai/go-gptscript"
 )
 
@@ -32,17 +33,53 @@ type cred struct {
 	RefreshToken string            `json:"refreshToken"`
 }
 
+type cliConfig struct {
+	Integrations map[string]string `json:"integrations"`
+	GatewayHost  string            `json:"gatewayHost"`
+}
+
 var (
-	gatewayHost  = os.Getenv("gatewayHost")
-	appId        = os.Getenv("appId")
-	env          = os.Getenv("env")
-	scope        = os.Getenv("scope")
-	authorizeURL = fmt.Sprintf("%s/oauth-apps/%s/authorize", gatewayHost, appId)
-	refreshURL   = fmt.Sprintf("%s/oauth-apps/%s/refresh", gatewayHost, appId)
-	tokenURL     = fmt.Sprintf("%s/oauth-apps/get-token", gatewayHost)
+	integration = os.Getenv("integration")
+	env         = os.Getenv("env")
+	scope       = os.Getenv("scope")
 )
 
 func main() {
+	configPath, err := xdg.ConfigFile("gptscript/config.json")
+	if err != nil {
+		fmt.Printf("failed to get config file: %v\n", err)
+		os.Exit(1)
+	}
+
+	if os.Getenv("GPTSCRIPT_CONFIG") != "" {
+		configPath = os.Getenv("GPTSCRIPT_CONFIG")
+	}
+
+	cfgBytes, err := os.ReadFile(configPath)
+	if err != nil {
+		fmt.Printf("failed to read config file: %v\n", err)
+		os.Exit(1)
+	}
+
+	var cfg cliConfig
+	if err := json.Unmarshal(cfgBytes, &cfg); err != nil {
+		fmt.Printf("failed to unmarshal config: %v\n", err)
+		os.Exit(1)
+	}
+
+	integrationAppID, ok := cfg.Integrations[integration]
+	if !ok {
+		fmt.Printf("integration %q not found\n", integration)
+		os.Exit(1)
+	}
+
+	var (
+		authorizeURL = fmt.Sprintf("%s/oauth-apps/%s/authorize", cfg.GatewayHost, integrationAppID)
+		refreshURL   = fmt.Sprintf("%s/oauth-apps/%s/refresh", cfg.GatewayHost, integrationAppID)
+		tokenURL     = fmt.Sprintf("%s/oauth-apps/get-token", cfg.GatewayHost)
+	)
+
+	// Refresh existing credential if there is one.
 	existing := os.Getenv("GPTSCRIPT_EXISTING_CREDENTIAL")
 	if existing != "" {
 		var c cred

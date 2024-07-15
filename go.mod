@@ -1,8 +1,11 @@
-module graphtutorial
+module gateway-oauth2
 
 go 1.22.4
 
-require github.com/gptscript-ai/go-gptscript v0.0.0-20240619172533-bcf7d41f6725
+require (
+	github.com/adrg/xdg v0.4.0
+	github.com/gptscript-ai/go-gptscript v0.9.2
+)
 
 require (
 	github.com/getkin/kin-openapi v0.124.0 // indirect
@@ -14,5 +17,6 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/perimeterx/marshmallow v1.1.5 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
