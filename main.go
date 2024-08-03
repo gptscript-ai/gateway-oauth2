@@ -74,9 +74,9 @@ func main() {
 	}
 
 	var (
-		authorizeURL = fmt.Sprintf("%s/oauth-apps/%s/authorize", cfg.GatewayHost, integrationAppID)
-		refreshURL   = fmt.Sprintf("%s/oauth-apps/%s/refresh", cfg.GatewayHost, integrationAppID)
-		tokenURL     = fmt.Sprintf("%s/oauth-apps/get-token", cfg.GatewayHost)
+		authorizeURL = fmt.Sprintf("%s/api/oauth-apps/%s/authorize", cfg.GatewayHost, integrationAppID)
+		refreshURL   = fmt.Sprintf("%s/api/oauth-apps/%s/refresh", cfg.GatewayHost, integrationAppID)
+		tokenURL     = fmt.Sprintf("%s/api/oauth-apps/get-token", cfg.GatewayHost)
 	)
 
 	// Refresh existing credential if there is one.
