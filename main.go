@@ -35,7 +35,7 @@ type cred struct {
 
 type cliConfig struct {
 	Integrations map[string]string `json:"integrations"`
-	GatewayHost  string            `json:"gatewayHost"`
+	GatewayURL   string            `json:"gatewayURL"`
 }
 
 var (
@@ -74,9 +74,9 @@ func main() {
 	}
 
 	var (
-		authorizeURL = fmt.Sprintf("%s/oauth-apps/%s/authorize", cfg.GatewayHost, integrationAppID)
-		refreshURL   = fmt.Sprintf("%s/oauth-apps/%s/refresh", cfg.GatewayHost, integrationAppID)
-		tokenURL     = fmt.Sprintf("%s/api/oauth-apps/get-token", cfg.GatewayHost)
+		authorizeURL = fmt.Sprintf("%s/oauth-apps/%s/authorize", cfg.GatewayURL, integrationAppID)
+		refreshURL   = fmt.Sprintf("%s/oauth-apps/%s/refresh", cfg.GatewayURL, integrationAppID)
+		tokenURL     = fmt.Sprintf("%s/api/oauth-apps/get-token", cfg.GatewayURL)
 	)
 
 	// Refresh existing credential if there is one.
