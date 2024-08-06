@@ -39,9 +39,9 @@ type cliConfig struct {
 }
 
 var (
-	integration = os.Getenv("integration")
-	env         = os.Getenv("env")
-	scope       = os.Getenv("scope")
+	integration = os.Getenv("INTEGRATION")
+	env         = os.Getenv("ENV")
+	scope       = os.Getenv("SCOPE")
 )
 
 func main() {
