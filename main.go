@@ -16,6 +16,7 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/gptscript-ai/go-gptscript"
+	"github.com/pkg/browser"
 )
 
 type oauthResponse struct {
@@ -186,7 +187,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	sysPromptInput := fmt.Sprintf(`{"message":%q,"fields":""}`, fmt.Sprintf("Please go to %s to authorize GPTScript.", u.String()))
+	sysPromptInput := fmt.Sprintf(`{"message":%q,"fields":""}`, fmt.Sprintf("Opening browser to %s. If there is an issue, paste this link into a browser manually.", u.String()))
 
 	run, err := gs.Run(context.Background(), "sys.prompt", gptscript.Options{
 		Input: sysPromptInput,
@@ -200,6 +201,9 @@ func main() {
 		fmt.Printf("failed to get text: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Open the user's browser so that they can authorize the app.
+	_ = browser.OpenURL(u.String())
 
 	t := time.NewTicker(2 * time.Second)
 	for {
