@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -103,7 +102,6 @@ func main() {
 			q.Set("scope", scope)
 		}
 		if optionalScope != "" {
-			optionalScope = strings.ReplaceAll(optionalScope, " ", "%20")
 			q.Set("optional_scope", optionalScope)
 		}
 		u.RawQuery = q.Encode()
@@ -186,7 +184,6 @@ func main() {
 		q.Set("scope", scope)
 	}
 	if optionalScope != "" {
-		optionalScope = strings.ReplaceAll(optionalScope, " ", "%20")
 		q.Set("optional_scope", optionalScope)
 	}
 	u.RawQuery = q.Encode()
