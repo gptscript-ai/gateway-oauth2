@@ -40,9 +40,10 @@ type cliConfig struct {
 }
 
 var (
-	integration = os.Getenv("INTEGRATION")
-	env         = os.Getenv("ENV")
-	scope       = os.Getenv("SCOPE")
+	integration   = os.Getenv("INTEGRATION")
+	env           = os.Getenv("ENV")
+	scope         = os.Getenv("SCOPE")
+	optionalScope = os.Getenv("OPTIONAL_SCOPE")
 )
 
 func main() {
@@ -99,6 +100,9 @@ func main() {
 		q.Set("refresh_token", c.RefreshToken)
 		if scope != "" {
 			q.Set("scope", scope)
+		}
+		if optionalScope != "" {
+			q.Set("optional_scope", optionalScope)
 		}
 		u.RawQuery = q.Encode()
 
@@ -178,6 +182,9 @@ func main() {
 	q.Set("challenge", challenge)
 	if scope != "" {
 		q.Set("scope", scope)
+	}
+	if optionalScope != "" {
+		q.Set("optional_scope", optionalScope)
 	}
 	u.RawQuery = q.Encode()
 
