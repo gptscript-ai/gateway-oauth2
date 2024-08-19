@@ -10,8 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
-	"syscall"
+	"strings"
 	"time"
 
 	"github.com/adrg/xdg"
@@ -148,9 +147,6 @@ func main() {
 		return
 	}
 
-	sigCtx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGKILL)
-	defer cancel()
-
 	state, err := generateString()
 	if err != nil {
 		fmt.Printf("failed to generate state: %v\n", err)
@@ -187,86 +183,96 @@ func main() {
 		os.Exit(1)
 	}
 
-	sysPromptInput := fmt.Sprintf(`{"message":%q,"fields":""}`, fmt.Sprintf("Opening browser to %s. If there is an issue, paste this link into a browser manually.", u.String()))
+	metadata := map[string]string{
+		"toolContext":     "credential",
+		"toolDisplayName": fmt.Sprintf("%s%s Integration", strings.ToTitle(integration[:1]), integration[1:]),
+		"authURL":         u.String(),
+	}
+
+	b, err := json.Marshal(metadata)
+	if err != nil {
+		fmt.Printf("failed to marshal metadata: %v\n", err)
+		os.Exit(1)
+	}
 
 	run, err := gs.Run(context.Background(), "sys.prompt", gptscript.Options{
-		Input: sysPromptInput,
+		Input: fmt.Sprintf(`{"metadata":%s,"message":%q}`, b, fmt.Sprintf("Opening browser to %s. If there is an issue, paste this link into a browser manually.", u.String())),
 	})
 	if err != nil {
 		fmt.Printf("failed to run sys.prompt: %v\n", err)
 		os.Exit(1)
 	}
 
-	if _, err = run.Text(); err != nil {
+	out, err := run.Text()
+	if err != nil {
 		fmt.Printf("failed to get text: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Open the user's browser so that they can authorize the app.
-	_ = browser.OpenURL(u.String())
+	var m map[string]string
+	_ = json.Unmarshal([]byte(out), &m)
+
+	if m["handled"] != "true" {
+		// Open the user's browser so that they can authorize the app.
+		_ = browser.OpenURL(u.String())
+	}
 
 	t := time.NewTicker(2 * time.Second)
-	for {
-		select {
-		case <-sigCtx.Done():
-			fmt.Println("canceled")
+	for range t.C {
+		// Construct the request to get the token from the gateway.
+		req, err := http.NewRequest("GET", tokenURL, nil)
+		if err != nil {
+			fmt.Printf("failed to create request: %v\n", err)
 			os.Exit(1)
-		case <-t.C:
-			// Construct the request to get the token from the gateway.
-			req, err := http.NewRequest("GET", tokenURL, nil)
-			if err != nil {
-				fmt.Printf("failed to create request: %v\n", err)
-				os.Exit(1)
-			}
-
-			q = req.URL.Query()
-			q.Set("state", state)
-			q.Set("verifier", verifier)
-			req.URL.RawQuery = q.Encode()
-
-			// Send the request to the gateway.
-			now := time.Now()
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "failed to send request: %v\n", err)
-				continue
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				fmt.Fprintf(os.Stderr, "unexpected status code: %d\n", resp.StatusCode)
-				continue
-			}
-
-			// Parse the response from the gateway.
-			var oauthResp oauthResponse
-			if err := json.NewDecoder(resp.Body).Decode(&oauthResp); err != nil {
-				fmt.Printf("failed to decode JSON: %v\n", err)
-				_ = resp.Body.Close()
-				os.Exit(1)
-			}
-			_ = resp.Body.Close()
-
-			out := cred{
-				Env: map[string]string{
-					env: oauthResp.AccessToken,
-				},
-				RefreshToken: oauthResp.RefreshToken,
-			}
-
-			if oauthResp.ExpiresIn > 0 {
-				expiresAt := now.Add(time.Second * time.Duration(oauthResp.ExpiresIn))
-				out.ExpiresAt = &expiresAt
-			}
-
-			credJSON, err := json.Marshal(out)
-			if err != nil {
-				fmt.Printf("failed to marshal credential: %v\n", err)
-				os.Exit(1)
-			}
-
-			fmt.Print(string(credJSON))
-			os.Exit(0)
 		}
+
+		q = req.URL.Query()
+		q.Set("state", state)
+		q.Set("verifier", verifier)
+		req.URL.RawQuery = q.Encode()
+
+		// Send the request to the gateway.
+		now := time.Now()
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "failed to send request: %v\n", err)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			_, _ = fmt.Fprintf(os.Stderr, "unexpected status code: %d\n", resp.StatusCode)
+			continue
+		}
+
+		// Parse the response from the gateway.
+		var oauthResp oauthResponse
+		if err := json.NewDecoder(resp.Body).Decode(&oauthResp); err != nil {
+			fmt.Printf("failed to decode JSON: %v\n", err)
+			_ = resp.Body.Close()
+			os.Exit(1)
+		}
+		_ = resp.Body.Close()
+
+		out := cred{
+			Env: map[string]string{
+				env: oauthResp.AccessToken,
+			},
+			RefreshToken: oauthResp.RefreshToken,
+		}
+
+		if oauthResp.ExpiresIn > 0 {
+			expiresAt := now.Add(time.Second * time.Duration(oauthResp.ExpiresIn))
+			out.ExpiresAt = &expiresAt
+		}
+
+		credJSON, err := json.Marshal(out)
+		if err != nil {
+			fmt.Printf("failed to marshal credential: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Print(string(credJSON))
+		os.Exit(0)
 	}
 }
 
