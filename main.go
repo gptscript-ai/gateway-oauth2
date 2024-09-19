@@ -70,8 +70,7 @@ func main() {
 
 	integrationAppID, ok := cfg.Integrations[integration]
 	if !ok {
-		fmt.Printf("integration %q not found\n", integration)
-		os.Exit(1)
+		integrationAppID = integration
 	}
 
 	var (
@@ -191,6 +190,7 @@ func main() {
 	}
 
 	metadata := map[string]string{
+		"authType":        "oauth",
 		"toolContext":     "credential",
 		"toolDisplayName": fmt.Sprintf("%s%s Integration", strings.ToTitle(integration[:1]), integration[1:]),
 		"authURL":         u.String(),
@@ -203,7 +203,7 @@ func main() {
 	}
 
 	run, err := gs.Run(context.Background(), "sys.prompt", gptscript.Options{
-		Input: fmt.Sprintf(`{"metadata":%s,"message":%q}`, b, fmt.Sprintf("Opening browser to %s. If there is an issue, paste this link into a browser manually.", u.String())),
+		Input: fmt.Sprintf(`{"metadata":%s,"message":%q}`, b, fmt.Sprintf("To authenticate please open your browser to %s.", u.String())),
 	})
 	if err != nil {
 		fmt.Printf("failed to run sys.prompt: %v\n", err)
