@@ -45,6 +45,8 @@ var (
 	optionalScope = os.Getenv("OPTIONAL_SCOPE")
 )
 
+const publicGatewayURL = "https://gateway-api.gptscript.ai"
+
 func main() {
 	configPath, err := xdg.ConfigFile("gptscript/config.json")
 	if err != nil {
@@ -71,6 +73,10 @@ func main() {
 	integrationAppID, ok := cfg.Integrations[integration]
 	if !ok {
 		integrationAppID = integration
+	}
+
+	if cfg.GatewayURL == "" {
+		cfg.GatewayURL = publicGatewayURL
 	}
 
 	var (
