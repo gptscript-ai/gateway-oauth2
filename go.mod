@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/adrg/xdg v0.4.0
-	github.com/gptscript-ai/go-gptscript v0.9.5-rc3.0.20240820135702-14a861da41fa
+	github.com/gptscript-ai/go-gptscript v0.9.5-rc5.0.20240927213153-2af51434b93e
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 )
 
