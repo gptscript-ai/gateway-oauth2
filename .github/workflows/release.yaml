@@ -1,0 +1,86 @@
+name: build
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v*'
+  pull_request:
+
+env:
+  GO_VERSION: 1.23.0
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build
+        run: |
+          make build
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gateway-oauth2
+          path: gateway-oauth2-*
+          if-no-files-found: error
+
+  windows_build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Build
+        run: |
+          make build-windows
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gateway-oauth2-windows
+          path: gateway-oauth2-*.exe
+          if-no-files-found: error
+
+  create_release:
+    runs-on: ubuntu-latest
+    needs: [ build, windows_build ]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - run: sleep 10
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+      - run: ls -lR
+      - run: |
+          (cd gateway-oauth2 && sha256sum -b *) > checksums.txt
+          (cd gateway-oauth2-windows && sha256sum -b *) >> checksums.txt
+      - name: install gh CLI
+        run: |
+          # Command taken from here: https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian-ubuntu-linux-raspberry-pi-os-apt
+          (type -p wget >/dev/null || (sudo apt update && sudo apt-get install wget -y)) \
+            && sudo mkdir -p -m 755 /etc/apt/keyrings \
+            && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && sudo apt update \
+            && sudo apt install gh -y
+      - name: attach artifacts to release
+        run: |
+          RELEASE_NAME=${{ github.ref_name }}
+          gh release upload $RELEASE_NAME gateway-oauth2/* --repo ${{ github.repository }} --clobber
+          gh release upload $RELEASE_NAME gateway-oauth2-windows/* --repo ${{ github.repository }} --clobber
+          gh release upload $RELEASE_NAME checksums.txt --repo ${{ github.repository }} --clobber
